@@ -1,6 +1,8 @@
 .env
+backend/venv/
 __pycache__/
+*.pyc
+*.csv
 node_modules/
 .next/
-*.pyc
 .DS_Store
