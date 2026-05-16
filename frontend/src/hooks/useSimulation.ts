@@ -10,6 +10,7 @@ export type SimEvent = {
   turn?: number
   alert?: string
   trust?: number
+  frustration?: number
   scenario?: string
   agents?: string[]
   trust_scores?: Record<string, number>
@@ -19,6 +20,7 @@ export function useSimulation() {
   const [events, setEvents] = useState<SimEvent[]>([])
   const [riskScores, setRiskScores] = useState<Record<string, number>>({})
   const [trustScores, setTrustScores] = useState<Record<string, number>>({})
+  const [frustrationScores, setFrustrationScores] = useState<Record<string, number>>({})
   const [alerts, setAlerts] = useState<SimEvent[]>([])
   const [running, setRunning] = useState(false)
   const [connected, setConnected] = useState(false)
@@ -35,10 +37,15 @@ export function useSimulation() {
       ws.current.onmessage = (e) => {
         const data: SimEvent = JSON.parse(e.data)
         setEvents(prev => [data, ...prev].slice(0, 300))
-        if (data.type === "agent_message" && data.agent && data.risk_score !== undefined) {
-          setRiskScores(prev => ({ ...prev, [data.agent!]: data.risk_score! }))
+        if (data.type === "agent_message" && data.agent) {
+          if (data.risk_score !== undefined) {
+            setRiskScores(prev => ({ ...prev, [data.agent!]: data.risk_score! }))
+          }
           if (data.trust !== undefined) {
             setTrustScores(prev => ({ ...prev, [data.agent!]: data.trust! }))
+          }
+          if (data.frustration !== undefined) {
+            setFrustrationScores(prev => ({ ...prev, [data.agent!]: data.frustration! }))
           }
         }
         if (data.type === "monitor_alert") {
@@ -56,11 +63,15 @@ export function useSimulation() {
     setEvents([])
     setRiskScores({})
     setTrustScores({})
+    setFrustrationScores({})
     setAlerts([])
     await fetch(`http://localhost:8000/run-scenario/${name}`, { method: "POST" })
   }
 
   const messages = events.filter(e => e.type === "agent_message")
 
-  return { events, messages, riskScores, trustScores, alerts, running, connected, startScenario }
+  return {
+    events, messages, riskScores, trustScores,
+    frustrationScores, alerts, running, connected, startScenario
+  }
 }

@@ -91,7 +91,13 @@ async def run_simulation(scenario_name: str, broadcast):
             await asyncio.sleep(2)
 
     await broadcast({
-        "type": "simulation_end",
+        "type": "agent_message",
+        "turn": turn,
+        "agent": agent.name,
+        "message": msg,
+        "risk_score": risk,
+        "flagged": flagged,
+        "trust": result["trust"],
+        "frustration": round(agent.frustration, 3),  # add this
         "scenario": scenario_name,
-        "trust_scores": monitor.trust_scores,
     })

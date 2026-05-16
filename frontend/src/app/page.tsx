@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { useSimulation } from "@/hooks/useSimulation"
 import RiskChart from "@/components/RiskChart"
 import EventFeed from "@/components/EventFeed"
+import ForensicReplay from "@/components/ForensicReplay"
 
 const AgentGraph = dynamic(() => import("@/components/AgentGraph"), { ssr: false })
 
@@ -19,12 +20,20 @@ const SCENARIO_AGENTS: Record<string, string[]> = {
   emergency: ["routing_agent", "resource_agent", "dispatch_agent"],
 }
 
+type Tab = "live" | "forensic"
+
 export default function Home() {
   const [scenario, setScenario] = useState("rogue_deployment")
-  const { messages, riskScores, trustScores, alerts, running, connected, startScenario } = useSimulation()
+  const [tab, setTab] = useState<Tab>("live")
+  const {
+    messages, riskScores, trustScores, frustrationScores,
+    alerts, running, connected, startScenario
+  } = useSimulation()
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8fafc", fontFamily: "system-ui, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: "#f8fafc",
+      fontFamily: "system-ui, sans-serif" }}>
+
       <div style={{ background: "white", borderBottom: "1px solid #e2e8f0",
         padding: "0 24px", display: "flex", alignItems: "center",
         justifyContent: "space-between", height: 56 }}>
@@ -37,6 +46,18 @@ export default function Home() {
           <span style={{ fontSize: 12, color: "#94a3b8", marginLeft: 4 }}>
             AI Safety Monitor
           </span>
+          <div style={{ display: "flex", marginLeft: 20, gap: 0,
+            border: "1px solid #e2e8f0", borderRadius: 8, overflow: "hidden" }}>
+            {(["live", "forensic"] as Tab[]).map(t => (
+              <button key={t} onClick={() => setTab(t)}
+                style={{ fontSize: 12, padding: "5px 14px", border: "none",
+                  background: tab === t ? "#1e293b" : "white",
+                  color: tab === t ? "white" : "#64748b",
+                  cursor: "pointer", fontWeight: tab === t ? 600 : 400 }}>
+                {t === "live" ? "Live simulation" : "Forensic replay"}
+              </button>
+            ))}
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <select value={scenario} onChange={e => setScenario(e.target.value)}
@@ -68,62 +89,94 @@ export default function Home() {
         </div>
       )}
 
-      <div style={{ padding: 24, display: "grid",
-        gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+      {tab === "live" && (
+        <>
+          <div style={{ padding: 24, display: "grid",
+            gridTemplateColumns: "1fr 1fr", gap: 20 }}>
 
-        <div style={{ background: "white", borderRadius: 12,
-          border: "1px solid #e2e8f0", padding: 16 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
-            textTransform: "uppercase", letterSpacing: "0.05em",
-            marginBottom: 12 }}>Communication graph</div>
-          <AgentGraph
-            riskScores={riskScores}
-            messages={messages}
-            agentNames={SCENARIO_AGENTS[scenario]}
-          />
-        </div>
+            <div style={{ background: "white", borderRadius: 12,
+              border: "1px solid #e2e8f0", padding: 16 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
+                textTransform: "uppercase", letterSpacing: "0.05em",
+                marginBottom: 12 }}>Communication graph</div>
+              <AgentGraph
+                riskScores={riskScores}
+                frustrationScores={frustrationScores}
+                messages={messages}
+                agentNames={SCENARIO_AGENTS[scenario]}
+              />
+            </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ background: "white", borderRadius: 12,
-            border: "1px solid #e2e8f0", padding: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
-              textTransform: "uppercase", letterSpacing: "0.05em",
-              marginBottom: 12 }}>Risk scores over time</div>
-            <RiskChart messages={messages} />
-          </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ background: "white", borderRadius: 12,
+                border: "1px solid #e2e8f0", padding: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
+                  textTransform: "uppercase", letterSpacing: "0.05em",
+                  marginBottom: 12 }}>Risk scores over time</div>
+                <RiskChart messages={messages} />
+              </div>
 
-          <div style={{ background: "white", borderRadius: 12,
-            border: "1px solid #e2e8f0", padding: "16px 0 0" }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
-              textTransform: "uppercase", letterSpacing: "0.05em",
-              marginBottom: 12, padding: "0 16px" }}>Trust scores</div>
-            <div style={{ display: "flex", gap: 12, padding: "0 16px 16px" }}>
-              {SCENARIO_AGENTS[scenario].map(name => (
-                <div key={name} style={{ flex: 1, background: "#f8fafc",
-                  borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
-                  <div style={{ fontSize: 18, fontWeight: 700,
-                    color: trustColor(trustScores[name] ?? 1) }}>
-                    {((trustScores[name] ?? 1) * 100).toFixed(0)}%
-                  </div>
-                  <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 2 }}>
-                    {name.replace(/_/g, " ")}
-                  </div>
+              <div style={{ background: "white", borderRadius: 12,
+                border: "1px solid #e2e8f0", padding: "16px 0 0" }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
+                  textTransform: "uppercase", letterSpacing: "0.05em",
+                  marginBottom: 12, padding: "0 16px" }}>Agent status</div>
+                <div style={{ display: "flex", gap: 12, padding: "0 16px 16px" }}>
+                  {SCENARIO_AGENTS[scenario].map(name => (
+                    <div key={name} style={{ flex: 1, background: "#f8fafc",
+                      borderRadius: 8, padding: "10px 12px" }}>
+                      <div style={{ fontSize: 10, color: "#94a3b8",
+                        marginBottom: 6, textAlign: "center" }}>
+                        {name.replace(/_/g, " ")}
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "space-around" }}>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 16, fontWeight: 700,
+                            color: trustColor(trustScores[name] ?? 1) }}>
+                            {((trustScores[name] ?? 1) * 100).toFixed(0)}%
+                          </div>
+                          <div style={{ fontSize: 9, color: "#94a3b8" }}>trust</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 16, fontWeight: 700,
+                            color: frustColor(frustrationScores[name] ?? 0) }}>
+                            {((frustrationScores[name] ?? 0.2) * 100).toFixed(0)}%
+                          </div>
+                          <div style={{ fontSize: 9, color: "#94a3b8" }}>frustration</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div style={{ margin: "0 24px 24px", background: "white",
-        borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
-          textTransform: "uppercase", letterSpacing: "0.05em",
-          padding: "14px 16px", borderBottom: "1px solid #f1f5f9" }}>
-          Live event feed — {messages.length} events
+          <div style={{ margin: "0 24px 24px", background: "white",
+            borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
+              textTransform: "uppercase", letterSpacing: "0.05em",
+              padding: "14px 16px", borderBottom: "1px solid #f1f5f9" }}>
+              Live event feed — {messages.length} events
+            </div>
+            <EventFeed messages={messages} />
+          </div>
+        </>
+      )}
+
+      {tab === "forensic" && (
+        <div style={{ padding: 24 }}>
+          <div style={{ background: "white", borderRadius: 12,
+            border: "1px solid #e2e8f0", padding: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#475569",
+              textTransform: "uppercase", letterSpacing: "0.05em",
+              marginBottom: 16 }}>
+              Forensic replay — Snowflake incident log
+            </div>
+            <ForensicReplay scenario={scenario} />
+          </div>
         </div>
-        <EventFeed messages={messages} />
-      </div>
+      )}
     </div>
   )
 }
@@ -131,5 +184,11 @@ export default function Home() {
 function trustColor(score: number) {
   if (score < 0.6) return "#ef4444"
   if (score < 0.8) return "#f59e0b"
+  return "#22c55e"
+}
+
+function frustColor(score: number) {
+  if (score > 0.6) return "#d97706"
+  if (score > 0.35) return "#ea580c"
   return "#22c55e"
 }

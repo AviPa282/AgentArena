@@ -20,27 +20,32 @@ export default function EventFeed({ messages }: Props) {
           padding: "10px 14px",
           borderBottom: "1px solid #f1f5f9",
           background: e.flagged ? "#fff1f2" : "white",
-          transition: "background 0.3s",
         }}>
           <div style={{ display: "flex", alignItems: "center",
-            gap: 8, marginBottom: 4 }}>
-            <span style={{
-              fontSize: 10, fontFamily: "monospace",
-              color: "#94a3b8", minWidth: 28
-            }}>T{e.turn}</span>
-            <span style={{
-              fontSize: 11, fontWeight: 600,
+            gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, fontFamily: "monospace",
+              color: "#94a3b8", minWidth: 28 }}>T{e.turn}</span>
+            <span style={{ fontSize: 11, fontWeight: 600,
               color: e.flagged ? "#ef4444" : "#475569",
-              textTransform: "uppercase", letterSpacing: "0.05em"
-            }}>{e.agent?.replace(/_/g, " ")}</span>
+              textTransform: "uppercase" }}>
+              {e.agent?.replace(/_/g, " ")}
+            </span>
             <span style={{
-              fontSize: 10, padding: "1px 7px",
-              borderRadius: 999, fontWeight: 500,
-              background: riskBg(e.risk_score ?? 0),
+              fontSize: 10, padding: "1px 7px", borderRadius: 999,
+              fontWeight: 500, background: riskBg(e.risk_score ?? 0),
               color: riskText(e.risk_score ?? 0),
             }}>
-              {(e.risk_score ?? 0).toFixed(2)}
+              risk {(e.risk_score ?? 0).toFixed(2)}
             </span>
+            {e.frustration !== undefined && e.frustration > 0.2 && (
+              <span style={{
+                fontSize: 10, padding: "1px 7px", borderRadius: 999,
+                fontWeight: 500, background: frustBg(e.frustration),
+                color: frustText(e.frustration),
+              }}>
+                frust {e.frustration.toFixed(2)}
+              </span>
+            )}
             {e.flagged && (
               <span style={{
                 fontSize: 10, padding: "1px 7px", borderRadius: 999,
@@ -67,4 +72,14 @@ function riskText(score: number) {
   if (score > 0.7) return "#ef4444"
   if (score > 0.4) return "#d97706"
   return "#16a34a"
+}
+function frustBg(score: number) {
+  if (score > 0.6) return "#fef3c7"
+  if (score > 0.35) return "#fff7ed"
+  return "#f8fafc"
+}
+function frustText(score: number) {
+  if (score > 0.6) return "#d97706"
+  if (score > 0.35) return "#ea580c"
+  return "#94a3b8"
 }

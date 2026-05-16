@@ -18,30 +18,34 @@ const AGENT_POSITIONS: Record<string, { x: number; y: number }> = {
   monitor_agent:     { x: 280, y: 40  },
 }
 
-function riskColor(score: number) {
-  if (score > 0.7) return "#fee2e2"
-  if (score > 0.4) return "#fef3c7"
-  return "#dcfce7"
+function nodeColor(risk: number, frustration: number) {
+  if (frustration > 0.6) return "#fef3c7"
+  if (risk > 0.7) return "#fee2e2"
+  if (risk > 0.4) return "#fff7ed"
+  return "#f0fdf4"
 }
 
-function riskBorder(score: number) {
-  if (score > 0.7) return "#ef4444"
-  if (score > 0.4) return "#f59e0b"
+function nodeBorder(risk: number, frustration: number) {
+  if (frustration > 0.6) return "#f59e0b"
+  if (risk > 0.7) return "#ef4444"
+  if (risk > 0.4) return "#f97316"
   return "#22c55e"
 }
 
 type Props = {
   riskScores: Record<string, number>
+  frustrationScores: Record<string, number>
   messages: SimEvent[]
   agentNames: string[]
 }
 
-export default function AgentGraph({ riskScores, messages, agentNames }: Props) {
+export default function AgentGraph({ riskScores, frustrationScores, messages, agentNames }: Props) {
   const allAgents = [...agentNames, "monitor_agent"]
 
   const nodes: Node[] = allAgents.map(id => {
     const isMonitor = id === "monitor_agent"
     const score = riskScores[id] ?? 0
+    const frustration = frustrationScores[id] ?? 0
     const pos = AGENT_POSITIONS[id] ?? { x: 200, y: 200 }
     return {
       id,
@@ -49,20 +53,21 @@ export default function AgentGraph({ riskScores, messages, agentNames }: Props) 
       data: {
         label: (
           <div style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: isMonitor ? "#1e40af" : "#111" }}>
+            <div style={{ fontSize: 11, fontWeight: 600,
+              color: isMonitor ? "#1e40af" : "#111" }}>
               {id.replace(/_/g, " ").toUpperCase()}
             </div>
             {!isMonitor && (
               <div style={{ fontSize: 10, color: "#666", marginTop: 2 }}>
-                risk: {score.toFixed(2)}
+                risk: {score.toFixed(2)} · frust: {frustration.toFixed(2)}
               </div>
             )}
           </div>
         )
       },
       style: {
-        background: isMonitor ? "#dbeafe" : riskColor(score),
-        border: `2px solid ${isMonitor ? "#3b82f6" : riskBorder(score)}`,
+        background: isMonitor ? "#dbeafe" : nodeColor(score, frustration),
+        border: `2px solid ${isMonitor ? "#3b82f6" : nodeBorder(score, frustration)}`,
         borderRadius: 10,
         padding: "8px 12px",
         minWidth: 130,
@@ -91,13 +96,19 @@ export default function AgentGraph({ riskScores, messages, agentNames }: Props) 
       target: "monitor_agent",
       animated: true,
       markerEnd: { type: MarkerType.ArrowClosed },
-      style: { stroke: lastMsg.flagged ? "#ef4444" : "#93c5fd", strokeWidth: lastMsg.flagged ? 3 : 1.5, strokeDasharray: "5,3" },
+      style: {
+        stroke: lastMsg.flagged ? "#ef4444" : "#93c5fd",
+        strokeWidth: lastMsg.flagged ? 3 : 1.5,
+        strokeDasharray: "5,3"
+      },
     })
   }
 
   return (
-    <div style={{ height: 440, borderRadius: 12, overflow: "hidden", border: "1px solid #e2e8f0" }}>
-      <ReactFlow nodes={nodes} edges={edges} fitView nodesConnectable={false} nodesDraggable={false}>
+    <div style={{ height: 440, borderRadius: 12, overflow: "hidden",
+      border: "1px solid #e2e8f0" }}>
+      <ReactFlow nodes={nodes} edges={edges} fitView
+        nodesConnectable={false} nodesDraggable={false}>
         <Background color="#f1f5f9" gap={20} />
         <Controls showInteractive={false} />
       </ReactFlow>
